@@ -10,7 +10,7 @@ import { useWs } from '../../utils/useWs';
 import FormLoader from '../../components/loading/FormLoader';
 
 const TelegramService: FC = () => {
-  useLayoutTitle("GPS Control");
+  useLayoutTitle("Telegram Control");
   const { routerTab } = useRouterTab();
   const { loadData, saveData, saving, setData, data, errorMessage } = useRest<any>({
     read: readState,

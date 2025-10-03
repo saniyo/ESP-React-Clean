@@ -6,12 +6,9 @@
 #include <HttpEndpoint.h>
 #include <MqttPubSub.h>
 // #include <WebSocketTxRx.h>
-#include <ext_modules/GPSService.h>
 #include <NTPSettingsService.h>
-#include <ext_modules/PZEMService.h>
 #include <SunRise.h>
 #include <FormBuilder.h>
-
 #include <NewMultiWsService.h>  // <-- Містить MultiWsManager
 
 #define LED_PIN 2
@@ -266,9 +263,7 @@ class LightStateService : public StatefulService<LightState> {
                     SecurityManager* securityManager,
                     AsyncMqttClient* mqttClient,
                     LightMqttSettingsService* lightMqttSettingsService,
-                    GPSService* gpsService,
                     StatefulService<NTPSettings>* ntpService,
-                    PZEMService* pzemService,
                     MultiWsManager* wsManager);
 
   void setOriginId(const String& id) {
@@ -284,9 +279,7 @@ class LightStateService : public StatefulService<LightState> {
   MqttPubSub<LightState> _mqttPubSub;
   AsyncMqttClient* _mqttClient;
   LightMqttSettingsService* _lightMqttSettingsService;
-  GPSService* _gpsService;
   StatefulService<NTPSettings>* _ntpService;
-  PZEMService* _pzemService;
   TaskHandle_t lightTaskHandle;
   SunRise _sunRise;
 

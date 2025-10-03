@@ -27,20 +27,6 @@ ESP8266React::ESP8266React(AsyncWebServer* server)
 #if FT_ENABLED(FT_SECURITY)
     _authenticationService(server, &_securitySettingsService),
 #endif
-#if FT_ENABLED(FT_GPS)
-    _gpsService(server,
-              &ESPFS,
-              &_securitySettingsService,
-              new SoftwareSerial(),
-              [this](const char* m){ _telegramService.addToQueue(m); },
-              &_wsManager               //  <-- додано
-             ),
-#endif
-#if FT_ENABLED(FT_PZEM)
-    _pzemService(server, &ESPFS, &_securitySettingsService, new HardwareSerial(1), [this](const char* msg) {
-      _telegramService.addToQueue(msg);
-    }, &_wsManager),
-#endif
 #if FT_ENABLED(FT_TELEGRAM)
     _telegramService(server, &ESPFS, &_securitySettingsService, &_wsManager),
 #endif
@@ -110,12 +96,6 @@ void ESP8266React::begin() {
 #if FT_ENABLED(FT_MQTT)
   // _mqttSettingsService.begin();
 #endif
-#if FT_ENABLED(FT_GPS)
-  _gpsService.begin();
-#endif
-#if FT_ENABLED(FT_PZEM)
-  _pzemService.begin();
-#endif
 #if FT_ENABLED(FT_SECURITY)
   _securitySettingsService.begin();
 #endif
@@ -134,12 +114,6 @@ void ESP8266React::loop() {
 #endif
 #if FT_ENABLED(FT_MQTT)
   // _mqttSettingsService.loop();
-#endif
-#if FT_ENABLED(FT_GPS)
-  _gpsService.loop();
-#endif
-#if FT_ENABLED(FT_PZEM)
-  _pzemService.loop();
 #endif
 #if FT_ENABLED(FT_TELEGRAM)
   // ...

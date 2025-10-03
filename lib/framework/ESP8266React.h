@@ -30,9 +30,6 @@
 #include <WiFiStatus.h>
 #include <TelegramService.h>
 
-#include <ext_modules/GPSService.h>
-#include <ext_modules/PZEMService.h>
-
 #include <ESPFS.h>
 
 #include <NewMultiWsService.h>
@@ -102,23 +99,13 @@ class ESP8266React {
   }
 #endif
 
-#if FT_ENABLED(FT_GPS)
-  GPSService* getGPSService() {
-    return &_gpsService;
-  }
-#endif
-
-#if FT_ENABLED(FT_PZEM)
-  PZEMService* getPZEMService() {
-    return &_pzemService;
-  }
-#endif
 #if FT_ENABLED(FT_WEBSOCKET)
   MultiWsManager* getWsManager() {
     return &_wsManager;
   }
 #endif
-  void factoryReset() {
+
+void factoryReset() {
     _factoryResetService.factoryReset();
   }
 
@@ -147,12 +134,6 @@ class ESP8266React {
 #endif
 #if FT_ENABLED(FT_SECURITY)
   AuthenticationService _authenticationService;
-#endif
-#if FT_ENABLED(FT_GPS)
-  GPSService _gpsService;
-#endif
-#if FT_ENABLED(FT_PZEM)
-  PZEMService _pzemService;
 #endif
 #if FT_ENABLED(FT_TELEGRAM)
   TelegramService _telegramService;

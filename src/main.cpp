@@ -14,21 +14,8 @@ LightStateService lightStateService = LightStateService(&server,
                                                         esp8266React.getSecurityManager(),
                                                         esp8266React.getMqttClient(),
                                                         &lightMqttSettingsService,
-                                                        esp8266React.getGPSService(),
                                                         esp8266React.getNTPSettingsService(),
-                                                        esp8266React.getPZEMService(),
                                                         esp8266React.getWsManager());
-
-// LightStateService lightStateService(
-//   &server,
-//   esp8266React.getSecurityManager(),
-//   esp8266React.getMqttClient(),
-//   &lightMqttSettingsService,
-//   esp8266React.getGPSService(),
-//   esp8266React.getNTPSettingsService(),
-//   esp8266React.getPZEMService(),
-//   esp8266React.getWsManager()
-// );
 
 void espTask1(void* pvParameters);
 TaskHandle_t espTaskHandle1 = NULL;

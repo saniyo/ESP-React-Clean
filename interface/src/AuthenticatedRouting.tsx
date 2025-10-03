@@ -16,8 +16,6 @@ import NetworkTime from './framework/ntp/NetworkTime';
 import Mqtt from './framework/mqtt/Mqtt';
 import System from './framework/system/System';
 import Security from './framework/security/Security';
-import PZEMService from './framework/pzem/PZEMService';
-import GPSService from './framework/gps/GPSService';
 import TelegramService from './framework/telegram/TelegramService';
 
 const AuthenticatedRouting: FC = () => {
@@ -41,15 +39,6 @@ const AuthenticatedRouting: FC = () => {
   return (
     <Layout>
       <Routes>
-        {/* {features.gps && (
-          <Route path="/gps/*" element={<GPSService/>} />
-        )} */}
-        {features.gps && (
-          <Route path="/gps/*" element={<GPSService />} />
-        )}
-        {features.pzem && (
-            <Route path="/pzem/*" element={<PZEMService/>} />
-        )}
         {features.project && (
           <Route path={`/${PROJECT_PATH}/*`} element={<ProjectRouting />} />
         )}

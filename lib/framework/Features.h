@@ -37,14 +37,6 @@
 #define FT_UPLOAD_FIRMWARE 0
 #endif
 
-#ifndef FT_GPS
-#define FT_GPS 0
-#endif
-
-#ifndef FT_PZEM
-#define FT_PZEM 0
-#endif
-
 #ifndef FT_TELEGRAM
 #define FT_TELEGRAM 0
 #endif

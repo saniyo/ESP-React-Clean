@@ -42,16 +42,6 @@ void FeaturesService::features(AsyncWebServerRequest* request) {
 #else
   root["upload_firmware"] = false;
 #endif
-#if FT_ENABLED(FT_GPS)
-  root["gps"] = true;
-#else
-  root["gps"] = false;
-#endif
-#if FT_ENABLED(FT_PZEM)
-  root["pzem"] = true;
-#else
-  root["pzem"] = false;
-#endif
   response->setLength();
   request->send(response);
 }

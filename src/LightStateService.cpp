@@ -4,9 +4,7 @@ LightStateService::LightStateService(AsyncWebServer*  server,
                                      SecurityManager* sm,
                                      AsyncMqttClient* mqtt,
                                      LightMqttSettingsService* lms,
-                                     GPSService*      gps,
                                      StatefulService<NTPSettings>* ntp,
-                                     PZEMService*     pzem,
                                      MultiWsManager*  ws)
 : StatefulService<LightState>()
 , _httpEndpoint(LightState::read,
@@ -17,9 +15,7 @@ LightStateService::LightStateService(AsyncWebServer*  server,
 , _mqttPubSub  (LightState::haRead, LightState::haUpdate, this, mqtt)
 , _mqttClient  (mqtt)
 , _lightMqttSettingsService(lms)
-, _gpsService  (gps)
 , _ntpService  (ntp)
-, _pzemService (pzem)
 , _wsManager   (ws)
 {
     pinMode(LED_PIN, OUTPUT);
