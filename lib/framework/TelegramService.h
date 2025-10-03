@@ -103,10 +103,9 @@ struct TelegramSettings {
         FormBuilder::addNumberField(st,"qsize",AF::R,s.qSize);
         FormBuilder::addTextField  (st,"last", AF::R,s.lastMsg.c_str());
         FormBuilder::addSwitchField(st,"sent", AF::R,s.sent);
-
+        FormBuilder::addTextField  (st,"m_log",  AF::R,  s.manualLogRO.c_str());
         FormBuilder::addTextField  (st,"m_text", AF::RW, s.manualText.c_str());
         FormBuilder::addSwitchField(st,"m_send", AF::RW, false);
-        FormBuilder::addTextField  (st,"m_log",  AF::R,  s.manualLogRO.c_str());
 
         // SETTINGS: тільки конфіг-ключі
         JsonArray set=FormBuilder::createForm(root,"settings","Settings");

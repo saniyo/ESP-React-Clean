@@ -5,6 +5,7 @@ import TextField from './elements/TextField';
 import NumberField from './elements/NumberField';
 import SliderField from './elements/SliderField';
 import Checkbox from './elements/Checkbox';
+import ButtonField from './elements/ButtonField';
 import Switch from './elements/Switch';
 import Dropdown from './elements/Dropdown';
 import Textarea from './elements/TextArea';
@@ -76,6 +77,8 @@ const DynamicContentHandler: FC<DynamicContentHandlerProps> = ({
         return <SliderField key={fieldKey} {...commonProps} />;
       case 'checkbox':
         return <Checkbox key={fieldKey} {...commonProps} />;
+      case 'button':
+        return <ButtonField key={fieldKey} {...commonProps} />;
       case 'switch':
         return <Switch key={fieldKey} {...commonProps} />;
       case 'dropdown':
