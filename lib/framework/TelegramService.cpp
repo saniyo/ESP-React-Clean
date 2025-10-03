@@ -174,7 +174,7 @@ void TelegramService::task(void* pv){
     TelegramQueuedMessage* m{nullptr};
 
     for(;;){
-        // Підхопити "кнопку" Manual send (через WS/REST форму)
+        // Підхопити клік кнопки Manual send (через WS/REST форму)
         s->tryConsumeManualSendRequest();
 
         if (xQueueReceive(s->_q, &m, pdMS_TO_TICKS(50))==pdPASS && m){

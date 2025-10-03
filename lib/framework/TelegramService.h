@@ -22,10 +22,10 @@ struct TelegramSettings {
     String  chatLog[LOG_MAX];
     uint8_t chatLogSize{0};
 
-    // Міні-чат (STATUS / WS)
-    String manualText;           // вводимо сюди
-    String manualLogRO;          // read-only копія чату (склеєний текст)
-    bool   manualSendRequested{false}; // "кнопка" Send (з WS / з форми)
+    // Міні-чат
+    String manualText;                  // текст для відправки
+    String manualLogRO;                 // read-only лог (склеєний текст)
+    bool   manualSendRequested{false};  // подія натискання кнопки
 
     // Конфіг
     String botToken, chatId, topicId;
@@ -48,28 +48,25 @@ struct TelegramSettings {
         root["m_text"] = s.manualText;
         root["m_log"]  = joined;
 
-        // також віддамо конфіг у WS (щоб усе «прилітало» в стейт)
-        root["token"] = s.botToken;
-        root["chat"]  = s.chatId;
-        root["topic"] = s.topicId;
-        root["ena"]   = s.enabled;
-        root["delay"] = s.sendDelay;
+        root["m_send"] = false;
     }
 
     static StateUpdateResult staUpd(JsonObject& in, TelegramSettings& s){
         bool cfgChanged = false;
 
-        // Runtime: НЕ впливає на запис у флеш
+        // Runtime
         (void)FormBuilder::updateValue(in, "m_text", s.manualText);
-        bool sendBtn=false;
-        if (FormBuilder::updateValue(in, "m_send", sendBtn) && sendBtn) {
+
+        // Button: тригер по факту наявності ключа (значення не важливе)
+        if (in.containsKey("m_send")) {
             s.manualSendRequested = true;
         }
 
-        // Дозволяємо редагувати конфіг через WS (може бути корисно)
+        // Дозволимо редагувати конфіг через WS (опційно)
         cfgChanged |= FormBuilder::updateValue(in, "token", s.botToken);
         cfgChanged |= FormBuilder::updateValue(in, "chat",  s.chatId);
         cfgChanged |= FormBuilder::updateValue(in, "topic", s.topicId);
+
         bool enaTmp = s.enabled;
         if (FormBuilder::updateValue(in, "ena", enaTmp)) { s.enabled = enaTmp; cfgChanged = true; }
 
@@ -98,16 +95,17 @@ struct TelegramSettings {
 
     /* ----- REST форми ----- */
     static void readForm(TelegramSettings& s, JsonObject& root){
-        // STATUS: індикатори + міні-чат
+        // STATUS
         JsonArray st = FormBuilder::createForm(root,"status","Status");
         FormBuilder::addNumberField(st,"qsize",AF::R,s.qSize);
         FormBuilder::addTextField  (st,"last", AF::R,s.lastMsg.c_str());
         FormBuilder::addSwitchField(st,"sent", AF::R,s.sent);
+
         FormBuilder::addTextField  (st,"m_log",  AF::R,  s.manualLogRO.c_str());
         FormBuilder::addTextField  (st,"m_text", AF::RW, s.manualText.c_str());
-        FormBuilder::addSwitchField(st,"m_send", AF::RW, false);
+        FormBuilder::addButtonField(st,"m_send", AF::RW, "Send");
 
-        // SETTINGS: тільки конфіг-ключі
+        // SETTINGS
         JsonArray set=FormBuilder::createForm(root,"settings","Settings");
         FormBuilder::addTextField (set,"token", AF::RW,s.botToken.c_str());
         FormBuilder::addTextField (set,"chat",  AF::RW,s.chatId.c_str());
@@ -116,11 +114,11 @@ struct TelegramSettings {
         FormBuilder::addNumberField(set,"delay",AF::RW,s.sendDelay);
     }
 
-    // Універсальний апдейт (REST і може використатись також для FS/WS)
+    // Універсальний апдейт (REST + FS)
     static StateUpdateResult upd(JsonObject& j, TelegramSettings& s){
         bool cfgChanged = false;
 
-        // Підтримуємо плоский формат або вкладений "settings"
+        // Плоский формат або вкладений "settings"
         JsonObject src = j;
         if (j.containsKey("settings") && j["settings"].is<JsonObject>()) {
             src = j["settings"].as<JsonObject>();
@@ -144,12 +142,9 @@ struct TelegramSettings {
             if (newDelay != s.sendDelay) { s.sendDelay = newDelay; cfgChanged = true; }
         }
 
-        // Дозволимо REST також «тиснути кнопку» і писати текст — але без запису у флеш
+        // Дамо REST право тригерити кнопку / текст (без запису у флеш)
         (void)FormBuilder::updateValue(src, "m_text", s.manualText);
-        bool sendBtn=false;
-        if (FormBuilder::updateValue(src, "m_send", sendBtn) && sendBtn) {
-            s.manualSendRequested = true;
-        }
+        if (src.containsKey("m_send")) { s.manualSendRequested = true; }
 
         return cfgChanged ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
     }
