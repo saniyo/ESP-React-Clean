@@ -25,7 +25,7 @@ struct TelegramSettings {
     // Міні-чат
     String manualText;                  // текст для відправки
     String manualLogRO;                 // read-only лог (склеєний текст)
-    bool   manualSendRequested{false};  // подія натискання кнопки
+    bool   manualSend{false};           // СТАН кнопки (натиснута/ні)
 
     // Конфіг
     String botToken, chatId, topicId;
@@ -48,18 +48,39 @@ struct TelegramSettings {
         root["m_text"] = s.manualText;
         root["m_log"]  = joined;
 
-        root["m_send"] = false;
+        // ВАЖЛИВО: віддаємо як "1"/"0" (рядок), бо фронт працює з такими значеннями
+        root["m_send"] = s.manualSend ? "1" : "0";
+
+        // опційно — віддати конфіг по WS
+        root["token"] = s.botToken;
+        root["chat"]  = s.chatId;
+        root["topic"] = s.topicId;
+        root["ena"]   = s.enabled;
+        root["delay"] = s.sendDelay;
+    }
+
+    static bool parseOneZeroBool(JsonVariantConst v){
+        // приймаємо "1"/"0" (string), 1/0 (number), true/false (bool)
+        if (v.is<const char*>()){
+            const char* cs = v.as<const char*>();
+            if (!cs) return false;
+            return (strcmp(cs,"1")==0) || (strcasecmp(cs,"true")==0);
+        }
+        if (v.is<int>())  return v.as<int>() != 0;
+        if (v.is<bool>()) return v.as<bool>();
+        if (v.is<unsigned long>()) return v.as<unsigned long>() != 0UL;
+        return false;
     }
 
     static StateUpdateResult staUpd(JsonObject& in, TelegramSettings& s){
         bool cfgChanged = false;
 
-        // Runtime
+        // Runtime: текст
         (void)FormBuilder::updateValue(in, "m_text", s.manualText);
 
-        // Button: тригер по факту наявності ключа (значення не важливе)
+        // Кнопка: читаємо "1"/"0" тощо й виставляємо стан
         if (in.containsKey("m_send")) {
-            s.manualSendRequested = true;
+            s.manualSend = parseOneZeroBool(in["m_send"]);
         }
 
         // Дозволимо редагувати конфіг через WS (опційно)
@@ -103,6 +124,7 @@ struct TelegramSettings {
 
         FormBuilder::addTextField  (st,"m_log",  AF::R,  s.manualLogRO.c_str());
         FormBuilder::addTextField  (st,"m_text", AF::RW, s.manualText.c_str());
+        // Кнопка: якщо у твоїй збірці без підпису — прибери "Send"
         FormBuilder::addButtonField(st,"m_send", AF::RW, "Send");
 
         // SETTINGS
@@ -142,9 +164,11 @@ struct TelegramSettings {
             if (newDelay != s.sendDelay) { s.sendDelay = newDelay; cfgChanged = true; }
         }
 
-        // Дамо REST право тригерити кнопку / текст (без запису у флеш)
+        // REST також може прислати кнопку/текст — це runtime
         (void)FormBuilder::updateValue(src, "m_text", s.manualText);
-        if (src.containsKey("m_send")) { s.manualSendRequested = true; }
+        if (src.containsKey("m_send")) {
+            s.manualSend = parseOneZeroBool(src["m_send"]);
+        }
 
         return cfgChanged ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
     }

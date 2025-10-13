@@ -142,7 +142,8 @@ void TelegramService::appendLogLine(const String& line){
 }
 
 void TelegramService::tryConsumeManualSendRequest(){
-    if (_state.manualSendRequested && _state.enabled) {
+    // ТРИГЕР: manualSend == true (з урахуванням того, що фронт шле "1"/"0")
+    if (_state.manualSend && _state.enabled) {
         TelegramSendOptions opt;
         opt.parseMode = "Markdown";
         opt.silent    = false;
@@ -162,7 +163,8 @@ void TelegramService::tryConsumeManualSendRequest(){
             appendLogLine(line);
         }
 
-        _state.manualSendRequested = false;
+        // СКИДАЄМО СТАН КНОПКИ → "0" у WS, очищаємо текст
+        _state.manualSend = false;
         _state.manualText = "";
         callUpdateHandlers("sta");
     }
@@ -174,7 +176,7 @@ void TelegramService::task(void* pv){
     TelegramQueuedMessage* m{nullptr};
 
     for(;;){
-        // Підхопити клік кнопки Manual send (через WS/REST форму)
+        // Підхопити клік кнопки (manualSend==true)
         s->tryConsumeManualSendRequest();
 
         if (xQueueReceive(s->_q, &m, pdMS_TO_TICKS(50))==pdPASS && m){
