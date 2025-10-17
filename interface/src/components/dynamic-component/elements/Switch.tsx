@@ -1,3 +1,4 @@
+// Switch.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import { Switch as MuiSwitch, FormControlLabel, ListItem, Tooltip } from '@mui/material';
 import { Field } from '../types';
@@ -12,29 +13,28 @@ interface SwitchProps {
 
 const Switch: React.FC<SwitchProps> = ({ field, value, onChange, onBlur }) => {
   const { readableLabel, optionMap } = useFieldParser(field.label, field.o || '');
-  const isReadOnly = !!optionMap.r; // Перевірка на "read-only"
+  const isReadOnly = !!optionMap.r;
 
-  const [localValue, setLocalValue] = useState(!!value);
+  const [localValue, setLocalValue] = useState<boolean>(Boolean(value));
   const isInteracting = useRef(false);
 
   useEffect(() => {
     if (!isInteracting.current) {
-      setLocalValue(!!value); // Оновлення стану, якщо не взаємодіємо
+      setLocalValue(Boolean(value));
     }
   }, [value]);
 
   const handleClick = () => {
-    if (isReadOnly) return; // Забороняємо взаємодію, якщо компонент "read-only"
+    if (isReadOnly) return;
     const newChecked = !localValue;
     setLocalValue(newChecked);
     isInteracting.current = true;
-    const numericValue = newChecked ? 1 : 0;
-    onChange(field.label, numericValue);
-    onBlur(field.label, numericValue);
+    onChange(field.label, newChecked); // тільки boolean
+    onBlur(field.label, newChecked);   // тільки boolean
   };
 
   const handleMouseLeave = () => {
-    isInteracting.current = false; // Завершення взаємодії
+    isInteracting.current = false;
   };
 
   return (
@@ -45,7 +45,7 @@ const Switch: React.FC<SwitchProps> = ({ field, value, onChange, onBlur }) => {
             <MuiSwitch
               checked={localValue}
               onClick={handleClick}
-              disabled={isReadOnly} // Стан "read-only"
+              disabled={isReadOnly}
             />
           }
           label={readableLabel}

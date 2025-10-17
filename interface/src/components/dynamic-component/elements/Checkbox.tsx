@@ -12,28 +12,28 @@ interface CheckboxProps {
 
 const Checkbox: React.FC<CheckboxProps> = ({ field, value, onChange, onBlur }) => {
   const { readableLabel, optionMap } = useFieldParser(field.label, field.o || '');
-  const isReadOnly = !!optionMap.r; // Перевірка на "read-only"
-  const [localValue, setLocalValue] = useState(!!value);
+  const isReadOnly = !!optionMap.r;
+
+  const [localValue, setLocalValue] = useState<boolean>(!!value);
   const isInteracting = useRef(false);
 
   useEffect(() => {
     if (!isInteracting.current) {
-      setLocalValue(!!value); // Оновлення локального стану, якщо не взаємодіємо
+      setLocalValue(!!value);
     }
   }, [value]);
 
-  const handleClick = () => {
-    if (isReadOnly) return; // Забороняємо взаємодію, якщо компонент "read-only"
-    const newChecked = !localValue;
-    setLocalValue(newChecked);
+  const handleChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    if (isReadOnly) return;
+    const checked = e.target.checked;
+    setLocalValue(checked);
     isInteracting.current = true;
-    const numericValue = newChecked ? 1 : 0;
-    onChange(field.label, numericValue);
-    onBlur(field.label, numericValue);
+    onChange(field.label, checked);
+    onBlur(field.label, checked);
   };
 
   const handleMouseLeave = () => {
-    isInteracting.current = false; // Завершення взаємодії
+    isInteracting.current = false;
   };
 
   return (
@@ -43,8 +43,9 @@ const Checkbox: React.FC<CheckboxProps> = ({ field, value, onChange, onBlur }) =
           control={
             <MuiCheckbox
               checked={localValue}
-              onClick={handleClick}
-              disabled={isReadOnly} // Стан "read-only"
+              onChange={handleChange}
+              disabled={isReadOnly}
+              inputProps={{ 'aria-label': readableLabel }}
             />
           }
           label={readableLabel}

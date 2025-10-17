@@ -1,14 +1,12 @@
-/* DynamicStatus.tsx */
-
+// DynamicStatus.tsx
 import React, { FC, useEffect, useState, useCallback, useRef } from 'react';
-import DynamicContentHandler     from './DynamicContentHandler';
-import { SectionContent }        from '../../components';
-import FormLoader                from '../loading/FormLoader';
-import { Form, Field }           from './types';
-import { parseFieldOptions }     from './utils/fieldParser';
+import DynamicContentHandler from './DynamicContentHandler';
+import { SectionContent } from '../../components';
+import FormLoader from '../loading/FormLoader';
+import { Form, Field } from './types';
+import { parseFieldOptions } from './utils/fieldParser';
 import { setLiveValue } from './utils/liveCash';
 
-/* ----------- props ---------- */
 interface DynamicStatusProps {
   formName : string;
   data     : { description:string; fields:Array<{[k:string]:any;o:string}> };
@@ -21,28 +19,21 @@ interface DynamicStatusProps {
   updateWsData : (d:React.SetStateAction<any>, tx?:boolean, clr?:boolean)=>void;
 }
 
-/* =========================================================== */
 const DynamicStatus: FC<DynamicStatusProps> = ({
   formName, data, wsData, connected,
   originId, updateWsData
 }) => {
 
-  /* ---------- state ---------- */
   const [formState,setFormState] = useState<Form>({
     title:formName, description:'', fields:[]
   });
 
   const editingFields = useRef(new Set<string>());
 
-  /* ========= helper ========= */
   const getVal = (src:any, key:string) =>
         src?.[key] ?? src?.status?.fields?.[key];
 
-  const mergeTrend = (
-    oldArr:any[],
-    fresh:any[],
-    maxPts:number
-  )=>{
+  const mergeTrend = (oldArr:any[], fresh:any[], maxPts:number)=>{
     const merged = [...oldArr];
     fresh.forEach(pt=>{
       const ts = pt.timestamp;
@@ -59,23 +50,24 @@ const DynamicStatus: FC<DynamicStatusProps> = ({
     return merged;
   };
 
-  /* ========= REST → initial ========= */
+  // REST → initial (очікуємо boolean для двійкових)
   useEffect(()=>{
     if(!data?.fields) return;
 
-    const fields : Field[] =
+    const fields : (Field & {baseLabel:string})[] =
       data.fields.map((obj,idx)=>{
         const o = obj.o ?? '';
         const base = Object.keys(obj)[0];
-        let val    = obj[base];
+        let val    = (obj as any)[base];
 
         const {optionMap, finalType} = parseFieldOptions(base,o);
         const label = finalType==='trend'
           ? `${base}_${(o.match(/mode=([^;]+)/)?.[1]||idx)}`
           : base;
 
-        if(finalType==='checkbox'||finalType==='switch')
-          val = (val===1||val==='1');
+        if(finalType==='checkbox'||finalType==='switch'||finalType==='button'){
+          val = Boolean(val);
+        }
 
         return {
           label,
@@ -87,19 +79,19 @@ const DynamicStatus: FC<DynamicStatusProps> = ({
           step       : optionMap.st !== undefined ? Number(optionMap.st.value) : undefined,
           placeholder: optionMap.pl?.value as string|undefined,
           o,
-          baseLabel  : base           // для WS-пошуку
+          baseLabel  : base
         } as Field & {baseLabel:string};
       });
 
     setFormState({title:formName, description:data.description, fields});
   },[data,formName]);
 
-  /* ========= WS apply ========= */
+  // WS apply (очікуємо boolean для двійкових)
   const applyWs = useCallback((ws:any)=>{
     setFormState(prev=>{
-      const upd = prev.fields.map(f=>{
+      const upd = prev.fields.map((f:any)=>{
         const {label,type,o} = f;
-        const base = (f as any).baseLabel || label;
+        const base = f.baseLabel || label;
 
         if(type==='trend'){
           const inc = getVal(ws, base);
@@ -114,8 +106,8 @@ const DynamicStatus: FC<DynamicStatusProps> = ({
         const v = getVal(ws, base);
         if(v===undefined) return f;
 
-        if(type==='checkbox'||type==='switch')
-          return {...f, value:(v===1||v==='1')};
+        if(type==='checkbox'||type==='switch'||type==='button')
+          return {...f, value: Boolean(v)};
 
         return {...f, value:v};
       });
@@ -125,21 +117,26 @@ const DynamicStatus: FC<DynamicStatusProps> = ({
 
   useEffect(()=>{ if(wsData) applyWs(wsData); },[wsData,applyWs]);
 
-  /* ========= input handlers ========= */
+  // input handlers — тільки boolean для двійкових
   const onChange = (lbl:string,val:any)=>{
     editingFields.current.add(lbl);
     setFormState(p=>({...p,fields:p.fields.map(f=>f.label===lbl?{...f,value:val}:f)}));
   };
 
   const onBlur = (lbl:string,val:any)=>{
-    const fld = formState.fields.find(f=>f.label===lbl);
+    const fld = formState.fields.find((f:any)=>f.label===lbl);
     if(!fld) return;
-    const v = (fld.type==='checkbox'||fld.type==='switch') ? (val?1:0) : val;
-    updateWsData({type:'p', origin_id:originId, p:{[lbl]:v}}, true);
-    setLiveValue(lbl, v, 'ws');
+
+    const isBinary = (fld.type==='checkbox'||fld.type==='switch'||fld.type==='button');
+    const uiVal = isBinary ? Boolean(val) : val;
+
+    // по дроту відправляємо та ж boolean-семантика
+    updateWsData({type:'p', origin_id:originId, p:{[lbl]:uiVal}}, true);
+
+    // live кеш — boolean для двійкових
+    setLiveValue(lbl, uiVal, 'ws');
   };
 
-  /* ========= render ========= */
   if(!formState.fields.length)
     return <FormLoader message="Loading..." />;
 

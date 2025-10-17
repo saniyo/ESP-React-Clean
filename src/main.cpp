@@ -1,7 +1,6 @@
 #include <ESP8266React.h>
 #include <LightMqttSettingsService.h>
 #include <LightStateService.h>
-#include <SoftwareSerial.h>
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -20,9 +19,6 @@ LightStateService lightStateService = LightStateService(&server,
 void espTask1(void* pvParameters);
 TaskHandle_t espTaskHandle1 = NULL;
 
-void espTask2(void* pvParameters);
-TaskHandle_t espTaskHandle2 = NULL;
-
 void setup() {
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
@@ -33,18 +29,10 @@ void setup() {
   // load the initial light settings
   lightStateService.begin();
 
-  // start the light service
-  // lightMqttSettingsService.begin();
-  // lightStateService.gpsSetup();
-
   // start the server
   server.begin();
 
-  // // create task for ESPAsyncWebServer event loop
   xTaskCreatePinnedToCore(espTask1, "ESPAsyncWebServerTask", 4096, NULL, 1, &espTaskHandle1, 0);
-  // // create task for ESPAsyncWebServer event loop
-  xTaskCreatePinnedToCore(espTask2, "ESPAsyncWebServerTask", 2048, NULL, 1, &espTaskHandle2, 0);
-  
 }
 
 void loop() {
@@ -59,9 +47,3 @@ void espTask1(void* pvParameters) {
   }
 }
 
-void espTask2(void* pvParameters) {
-  // loop forever
-  while (true) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
-  }
-}

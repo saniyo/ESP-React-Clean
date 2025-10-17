@@ -1,3 +1,4 @@
+// DynamicSettings.tsx
 import React, { FC, useState, useEffect, useRef } from 'react';
 import DynamicContentHandler from './DynamicContentHandler';
 import { SectionContent } from '../../components';
@@ -5,7 +6,12 @@ import FormLoader from '../loading/FormLoader';
 import SubmitButton from './elements/SubmitButton';
 import { Field, Form } from './types';
 import { parseFieldOptions } from './utils/fieldParser';
-import { getLiveValue, getLiveSnapshot, subscribeLiveValues, setLiveValuesBulk } from './utils/liveCash';
+import {
+  getLiveValue,
+  getLiveSnapshot,
+  subscribeLiveValues,
+  setLiveValuesBulk,
+} from './utils/liveCash';
 
 interface DynamicSettingsProps {
   formName: string;
@@ -22,40 +28,43 @@ const DynamicSettings: FC<DynamicSettingsProps> = ({ formName, data, saveData, s
     fields: [],
   });
 
+  // Тут зберігаємо значення у форматі UI.
+  // Для булевих — завжди true/false.
   const [changedFields, setChangedFields] = useState<Record<string, any>>({});
 
-  // зберігаємо актуальний список лейблів, щоб не прив’язувати ефекти до formState
   const labelsRef = useRef<string[]>([]);
 
-  // будуємо fields з REST + поверх кладемо live (якщо є)
+  // Підвантаження з REST: усе, що булеве — приводимо до boolean.
   useEffect(() => {
     if (!data || !Array.isArray(data.fields)) return;
 
-    const fields: Field[] = data.fields.map((field) => {
-      const o = field.o || '';
-      const fieldName = Object.keys(field).find((key) => key !== 'o') || '';
-      let fieldValue = field[fieldName];
+    const fields: Field[] = data.fields.map((raw) => {
+      const o = (raw as any).o || '';
+      const fieldName = Object.keys(raw).find((k) => k !== 'o') || '';
+      let fieldValue = (raw as any)[fieldName];
 
-      // накладаємо live-значення поверх REST
+      // Якщо є live—значення, воно пріоритетне
       const live = getLiveValue(fieldName);
       if (live !== undefined) fieldValue = live;
 
       const { optionMap, finalType } = parseFieldOptions(fieldName, o);
-      const isReadOnly = !!optionMap.r;
+
+      const isBoolType =
+        finalType === 'checkbox' || finalType === 'switch' || finalType === 'button';
+      if (isBoolType) fieldValue = !!fieldValue;
+
       const min = optionMap.mn ? parseFloat(optionMap.mn.value as string) : undefined;
       const max = optionMap.mx ? parseFloat(optionMap.mx.value as string) : undefined;
+      // деякі конфіги можуть не мати "st" у типах — читаємо обережно
+      const step =
+        (optionMap as any).st !== undefined ? Number((optionMap as any).st.value) : undefined;
       const placeholder = optionMap.pl ? (optionMap.pl.value as string) : undefined;
-      const step = optionMap.st !== undefined ? Number(optionMap.st.value) : undefined;
-
-      if (finalType === 'checkbox' || finalType === 'switch') {
-        fieldValue = fieldValue === 1 || fieldValue === '1' || fieldValue === true;
-      }
 
       return {
         label: fieldName,
         value: fieldValue,
         type: finalType,
-        readOnly: isReadOnly,
+        readOnly: !!optionMap.r,
         min,
         max,
         step,
@@ -69,14 +78,13 @@ const DynamicSettings: FC<DynamicSettingsProps> = ({ formName, data, saveData, s
     setChangedFields({});
   }, [data, formName]);
 
-  // одразу після маунта/оновлення списку полів накладемо поточний snapshot live-значень
+  // Одноразово накласти snapshot із кешу (в UI-форматі)
   useEffect(() => {
     if (!formState.fields.length) return;
 
     const snap = getLiveSnapshot(labelsRef.current);
     if (!Object.keys(snap).length) return;
 
-    // готуємо патч тільки якщо є реальні зміни
     let changed = false;
     const nextFields = formState.fields.map((f) => {
       if (snap[f.label] !== undefined && snap[f.label] !== f.value) {
@@ -89,17 +97,16 @@ const DynamicSettings: FC<DynamicSettingsProps> = ({ formName, data, saveData, s
     if (changed) {
       setFormState((prev) => ({ ...prev, fields: nextFields }));
     }
-    // важливо: без залежності від formState, щоб не зациклитись
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formState.fields.length]);
 
-  // підписка на подальші live-апдейти: апдейтимо тільки, якщо значення дійсно змінилось
+  // Підписка на live-оновлення (значення завжди в UI-форматі)
   useEffect(() => {
     const unsub = subscribeLiveValues((label: string, value: any) => {
       if (!labelsRef.current.includes(label)) return;
 
-      setFormState(prev => {
-        const idx = prev.fields.findIndex(f => f.label === label);
+      setFormState((prev) => {
+        const idx = prev.fields.findIndex((f) => f.label === label);
         if (idx === -1) return prev;
 
         const oldVal = prev.fields[idx].value;
@@ -111,52 +118,52 @@ const DynamicSettings: FC<DynamicSettingsProps> = ({ formName, data, saveData, s
       });
     });
 
-    return unsub; // тепер це () => void, і React задоволений
+    return unsub;
   }, []);
 
   const handleInputChange = (label: string, value: any) => {
+    // Усе зберігаємо в UI-форматі: булеві — тільки true/false
+    const field = formState.fields.find((f) => f.label === label);
+    const isBoolType =
+      field && (field.type === 'checkbox' || field.type === 'switch' || field.type === 'button');
+    const uiValue = isBoolType ? !!value : value;
+
     setFormState((prevState) => {
-      const updatedFields = prevState.fields.map((field) =>
-        field.label === label ? { ...field, value } : field
+      const updatedFields = prevState.fields.map((f) =>
+        f.label === label ? { ...f, value: uiValue } : f
       );
       return { ...prevState, fields: updatedFields };
     });
 
-    setChangedFields((prevChanged) => ({
-      ...prevChanged,
-      [label]: value,
-    }));
+    setChangedFields((prev) => ({ ...prev, [label]: uiValue }));
   };
 
   const handleFieldBlur = (label: string, value: any) => {
+    // Те саме, що й handleInputChange: фіксуємо UI-значення
     const field = formState.fields.find((f) => f.label === label);
-    let sendValue = value;
-    if (field && (field.type === 'checkbox' || field.type === 'switch')) {
-      sendValue = value ? 1 : 0;
-    }
+    const isBoolType =
+      field && (field.type === 'checkbox' || field.type === 'switch' || field.type === 'button');
+    const uiValue = isBoolType ? !!value : value;
 
     setFormState((prevState) => {
-      const updatedFields = prevState.fields.map((fld) =>
-        fld.label === label ? { ...fld, value } : fld
+      const updatedFields = prevState.fields.map((f) =>
+        f.label === label ? { ...f, value: uiValue } : f
       );
       return { ...prevState, fields: updatedFields };
     });
 
-    setChangedFields((prevChanged) => ({
-      ...prevChanged,
-      [label]: sendValue,
-    }));
+    setChangedFields((prev) => ({ ...prev, [label]: uiValue }));
   };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (Object.keys(changedFields).length > 0) {
-      // 1) оптимістично оновлюємо live-кеш — щоб одразу побачити свіжі REST-значення
-      setLiveValuesBulk(changedFields, 'rest');
+    if (Object.keys(changedFields).length === 0) return;
 
-      // 2) як і було — шлемо на бек
-      saveData(changedFields);
-    }
+    // 1) Оновлюємо live-кеш UI-значеннями (булеві — true/false)
+    setLiveValuesBulk(changedFields, 'rest');
+
+    // 2) Відправляємо як є — без жодних 0/1 перетворень
+    saveData(changedFields);
   };
 
   if (!formState.fields) {
